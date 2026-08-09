@@ -2,3 +2,308 @@
 
 
 ---
+Create a production-ready React + TypeScript dashboard component named `SupplierPerformance` for an ERP application.
+
+## 1. Purpose
+
+Build a reusable "Supplier Performance" widget that allows users to quickly evaluate supplier reliability based on:
+
+* On-time delivery percentage
+* Average response time to purchase orders
+* Overall supplier performance status
+
+The component must be suitable for an enterprise production application, with strong typing, accessibility, predictable state handling, error handling, validation, and testability.
+
+## 2. Data contract
+
+The component should receive already-fetched data through a typed prop rather than performing its own API request.
+
+Define these TypeScript types:
+
+```ts
+export interface SupplierPerformanceData {
+  suppliers: SupplierPerformance[];
+}
+
+export interface SupplierPerformance {
+  id: string;
+  name: string;
+  onTimeDeliveryPercentage: number;
+  averageResponseTimeHours: number;
+}
+```
+
+Example:
+
+```ts
+const data: SupplierPerformanceData = {
+  suppliers: [
+    {
+      id: "SUP-001",
+      name: "ABC Supplies",
+      onTimeDeliveryPercentage: 92.5,
+      averageResponseTimeHours: 4.2,
+    },
+    {
+      id: "SUP-002",
+      name: "XYZ Traders",
+      onTimeDeliveryPercentage: 76.0,
+      averageResponseTimeHours: 12.5,
+    },
+  ],
+};
+```
+
+Do not make the component responsible for fetching data. The parent/application layer is responsible for calling the backend API and passing validated data into the component.
+
+Assume the backend endpoint is:
+
+`GET /api/suppliers/performance`
+
+with the same JSON structure.
+
+## 3. Component API
+
+Implement:
+
+```tsx
+interface SupplierPerformanceProps {
+  data: SupplierPerformanceData;
+  isLoading?: boolean;
+  error?: string | null;
+}
+```
+
+The component must handle:
+
+* Loading state
+* Error state
+* Empty supplier list
+* Valid supplier data
+
+Do not silently display incorrect data.
+
+## 4. Business rules
+
+Do NOT invent business thresholds dynamically.
+
+Define all thresholds as named constants so they can be reviewed and changed by the business/application team.
+
+Use these initial defaults:
+
+### On-time delivery
+
+* Green: >= 95%
+* Yellow: >= 85% and < 95%
+* Red: < 85%
+
+### Average response time
+
+* Green: <= 4 hours
+* Yellow: > 4 and <= 8 hours
+* Red: > 8 hours
+
+Calculate a status independently for each metric.
+
+The supplier's overall status must be the worst status of the two metrics:
+
+* Green + Green → Green
+* Green + Yellow → Yellow
+* Green + Red → Red
+* Yellow + Yellow → Yellow
+* Yellow + Red → Red
+* Red + Red → Red
+
+Do not use arbitrary averages to calculate the overall status.
+
+Keep the status calculation in a separate pure function so it can be unit tested independently from the React UI.
+
+## 5. Data validation
+
+Treat invalid data defensively.
+
+Handle:
+
+* Missing supplier ID
+* Missing supplier name
+* Missing metrics
+* Non-numeric metric values
+* `NaN`
+* Negative response times
+* Delivery percentages below 0 or above 100
+
+Do not display misleading performance results.
+
+Prefer validating the API response at the application/API boundary. The component should still safely handle unexpected values rather than crashing.
+
+## 6. UI layout
+
+Create a responsive dashboard using a combination of summary cards and a detailed table.
+
+### Summary cards
+
+Display:
+
+1. **Total Suppliers**
+2. **Average On-Time Delivery**
+3. **Average Response Time**
+
+Calculate summary values only from valid supplier records.
+
+### Supplier table
+
+Display:
+
+| Column             | Content        |
+| ------------------ | -------------- |
+| Supplier           | Supplier name  |
+| On-Time Delivery   | Percentage     |
+| Avg. Response Time | Hours          |
+| Status             | Overall status |
+
+Each supplier row should clearly display its performance status.
+
+Use semantic HTML such as:
+
+* `<section>`
+* `<table>`
+* `<thead>`
+* `<tbody>`
+* `<th>`
+* `<td>`
+
+Do not use a div-based table.
+
+## 7. Status presentation
+
+Use both visual color and text.
+
+Status colors:
+
+* Green: `#16a34a`
+* Yellow: `#ca8a04`
+* Red: `#dc2626`
+
+Do not rely on color alone.
+
+For example:
+
+* `Good`
+* `Warning`
+* `Poor`
+
+Use accessible contrast and appropriate semantic/ARIA attributes where needed.
+
+A screen-reader user must be able to understand the status without seeing the color.
+
+## 8. Loading and error states
+
+When `isLoading` is true:
+
+* Display a clear loading state.
+* Do not render misleading empty-state messaging.
+
+When `error` is provided:
+
+* Display a clear error message.
+* Do not pretend that the supplier list is empty.
+
+When loading is false, there is no error, and `data.suppliers` is empty:
+
+Display:
+
+`No supplier performance data available.`
+
+## 9. Formatting
+
+Format:
+
+* Delivery percentages to one decimal place, e.g. `92.5%`
+* Response time to one decimal place, e.g. `4.2 hours`
+* Avoid excessive decimal precision.
+
+Do not hard-code locale-specific formatting if the application already provides a localization layer.
+
+Keep formatting functions separate from the status calculation logic.
+
+## 10. Accessibility
+
+Follow WCAG-oriented accessibility practices.
+
+Requirements include:
+
+* Semantic table markup
+* Proper table headers
+* Keyboard-accessible interactive elements
+* Meaningful accessible labels
+* Status must not depend on color alone
+* Sufficient color contrast
+* Clear loading and error announcements where appropriate
+* Do not use emojis as the only status indicator
+
+## 11. Responsive behavior
+
+The widget must work on:
+
+* Desktop
+* Tablet
+* Mobile
+
+The table should remain usable on narrow screens, using horizontal scrolling or another accessible responsive strategy rather than allowing content to become unreadable.
+
+## 12. Architecture and code quality
+
+Use:
+
+* React functional components
+* TypeScript
+* Small pure helper functions for business logic
+* Named constants for business thresholds
+* Clear interfaces/types
+* No unnecessary dependencies
+* No duplicated business logic
+* No hard-coded supplier data
+* Stable React keys using supplier IDs
+
+Keep presentation logic separate from status/business-rule calculations where practical.
+
+Do not introduce a state-management library unless it is explicitly required.
+
+Do not fetch data inside this component.
+
+## 13. Testing requirements
+
+Also provide unit tests for the pure status-calculation functions covering at least:
+
+* Green/Green → Green
+* Green/Yellow → Yellow
+* Green/Red → Red
+* Yellow/Yellow → Yellow
+* Yellow/Red → Red
+* Red/Red → Red
+* Boundary values such as 95%, 85%, 4 hours, and 8 hours
+* Invalid metric values
+
+Also provide basic component tests covering:
+
+* Loading state
+* Error state
+* Empty state
+* Rendering multiple suppliers
+* Correct status display
+* Correct summary calculations
+
+Use the testing framework already present in the project. Do not introduce a new testing framework unnecessarily.
+
+## 14. Deliverables
+
+Return:
+
+1. `SupplierPerformance.tsx`
+2. The pure business/status utility functions, either colocated or in a clearly separated utility file.
+3. Corresponding unit/component tests.
+4. A brief explanation of the status calculation and threshold constants.
+
+The generated code must compile with strict TypeScript settings and should not contain `any` unless there is a documented and unavoidable reason.
+
+Do not use placeholder implementations, TODOs, mock API calls, or pseudocode.
